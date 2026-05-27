@@ -1,0 +1,116 @@
+require('dotenv').config();
+// 其他引入语句，比如 const express = require('express'); 在这行下面
+console.log('Token loaded:', process.env.SILICONFLOW_API_TOKEN ? 'Yes' : 'No');
+
+const express = require('express');
+const cors = require('cors');
+const bodyParser = require('body-parser');
+
+const app = express();
+const PORT = process.env.PORT || 3001;
+
+// 中间件
+app.use(cors());
+app.use((req, res, next) => {
+  console.log(`📨 ${req.method} ${req.url}`);
+  next();
+});
+app.use(bodyParser.json({ limit: '50mb' }));
+
+// ---------- 根据队伍代码获取队伍信息 ----------
+const getTeamInfo = (teamCode) => {
+  const teams = {
+    USA: { name: 'USA', primary: '#0A3161', accent: '#FFFFFF' },
+    Mexico: { name: 'Mexico', primary: '#006847', accent: '#CE1126' },
+    Argentina: { name: 'Argentina', primary: '#75AADB', accent: '#FCBF49' },
+    Brazil: { name: 'Brazil', primary: '#FFD700', accent: '#009C3B' },
+    France: { name: 'France', primary: '#0055A4', accent: '#EF4135' },
+    England: { name: 'England', primary: '#FFFFFF', accent: '#C8102E' },
+    Spain: { name: 'Spain', primary: '#C60B1E', accent: '#FFC400' },
+    Germany: { name: 'Germany', primary: '#000000', accent: '#DD0000' },
+    Portugal: { name: 'Portugal', primary: '#B50000', accent: '#006600' },
+    Netherlands: { name: 'Netherlands', primary: '#FF6F00', accent: '#21468B' },
+    Japan: { name: 'Japan', primary: '#000080', accent: '#FFFFFF' },
+    Morocco: { name: 'Morocco', primary: '#C1272D', accent: '#006233' }
+  };
+  return teams[teamCode] || { name: teamCode, primary: '#1E3A8A', accent: '#FFFFFF' };
+};
+
+// ---------- 头像生成 API ----------
+
+module.exports = async (req, res) => {
+  try {
+    const { imageBase64, teamCode, style } = req.body;
+    
+    if (!imageBase64 || !teamCode) {
+      return res.status(400).json({ error: 'Missing required parameters' });
+    }
+
+    const teamInfo = getTeamInfo(teamCode);
+    const stylePrompt = style === 'anime' 
+      ? '3D pop anime style, Pixar cinematic look, vibrant colors, smooth lighting' 
+      : 'hyper-realistic style, stadium dramatic lighting, 8K, detailed skin texture, professional photography';
+
+    // 关键修改：提示词要求保留原人脸
+    const prompt = `Modify this person's photo: dress them in a ${teamInfo.name} national team soccer jersey, add ${teamInfo.primary} and ${teamInfo.accent} face paint on cheeks. The style is ${stylePrompt}. Put them in a crowded World Cup stadium with confetti and flares. MUST keep the person's original face, facial features, and identity completely unchanged. Only change clothes, face paint, and background.`;
+
+    const SILICONFLOW_API_KEY = process.env.SILICONFLOW_API_TOKEN;
+    if (!SILICONFLOW_API_KEY) {
+      console.error('Missing SILICONFLOW_API_TOKEN');
+      return res.status(500).json({ error: 'Server configuration error' });
+    }
+
+    const API_URL = 'https://api.siliconflow.cn/v1/images/generations';
+    
+    // 关键修改：使用支持图生图的模型 Qwen/Qwen-Image-Edit
+    const requestBody = {
+    model: 'baidu/ERNIE-Image-Turbo', // 👈 替换为加速版模型ID
+
+    prompt: prompt,
+    image: imageBase64,             // 图生图的核心参数
+    num_images: 1,
+    width: 512,
+    height: 512,
+    strength: 0.6,               // 可选，控制与原图的相似度，建议取值范围 0.6-0.8，数值越小越像原图
+};
+
+    const response = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${SILICONFLOW_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    const data = await response.json();
+    
+    if (!response.ok) {
+      console.error('SiliconFlow API Error:', JSON.stringify(data, null, 2));
+      throw new Error(data.error?.message || 'SiliconFlow API request failed');
+    }
+
+    const imageUrl = data.images[0].url;
+    const imgResponse = await fetch(imageUrl);
+    const buffer = await imgResponse.arrayBuffer();
+    const base64 = Buffer.from(buffer).toString('base64');
+    const dataUrl = `data:image/png;base64,${base64}`;
+    
+    res.json({ success: true, imageData: dataUrl });
+  } catch (error) {
+    console.error('Avatar generation error:', error);
+    res.status(500).json({ error: 'Failed to generate avatar', details: error.message });
+  }
+};
+
+
+
+// ---------- 健康检查 ----------
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'ok' });
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
+  console.log(`Make sure SILICONFLOW_API_TOKEN is set in environment variables`);
+});

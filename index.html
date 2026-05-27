@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>AI World Cup Superfan · Avatar & Banner Generator</title>
+    <!-- Tailwind CSS + FontAwesome + Google Fonts -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&display=swap');
+        * {
+            font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+        }
+        body {
+            background: radial-gradient(circle at 10% 30%, #0B0F1A, #03060C);
+        }
+        .glass-panel {
+            background: rgba(18, 25, 40, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .neon-glow {
+            box-shadow: 0 0 12px rgba(59,130,246,0.3);
+        }
+        .tab-active {
+            background: linear-gradient(135deg, #1E2A3A, #0F172A);
+            border-bottom: 2px solid #3B82F6;
+            color: white;
+        }
+        .team-card.selected {
+            border-color: #10B981;
+            background: rgba(16, 185, 129, 0.2);
+            transform: scale(1.02);
+        }
+        .style-card.selected {
+            border-color: #3B82F6;
+            background: rgba(59, 130, 246, 0.2);
+        }
+        .scrollbar-custom::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-track {
+            background: #1E293B;
+            border-radius: 8px;
+        }
+        .scrollbar-custom::-webkit-scrollbar-thumb {
+            background: #3B82F6;
+            border-radius: 8px;
+        }
+        @keyframes floatGlow {
+            0% { text-shadow: 0 0 0px rgba(255,215,0,0);}
+            100% { text-shadow: 0 0 8px rgba(255,215,0,0.6);}
+        }
+        .animate-pulse-slow {
+            animation: pulse 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        .custom-share-btn {
+            transition: all 0.2s ease;
+        }
+        .custom-share-btn:hover {
+            transform: translateY(-2px);
+        }
+        /* 手机端缩小语言按钮 */
+        @media (max-width: 640px) {
+            .header-buttons button {
+                padding-left: 0.5rem !important;
+                padding-right: 0.5rem !important;
+                font-size: 0.7rem !important;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-gray-200">
+
+    <!-- Header -->
+    <header class="border-b border-gray-800/60 bg-black/40 sticky top-0 z-50 backdrop-blur-md px-5 py-3">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-futbol text-amber-400 text-2xl animate-spin-slow" style="animation: spin 8s linear infinite;"></i>
+                <span class="font-black text-2xl tracking-tight bg-gradient-to-r from-blue-400 via-emerald-400 to-amber-400 bg-clip-text text-transparent">FANPIC<span class="text-white">.AI</span></span>
+            </div>
+            <div class="flex gap-2 bg-gray-900/70 rounded-full p-1 border border-gray-700">
+                <button onclick="setLang('en')" id="lang-en" class="px-2 sm:px-3 py-1 rounded-full text-xs font-bold transition bg-blue-600 text-white">EN</button>
+                <button onclick="setLang('es')" id="lang-es" class="px-2 sm:px-3 py-1 rounded-full text-xs font-bold transition text-gray-300 hover:text-white">ES</button>
+                <button onclick="setLang('pt')" id="lang-pt" class="px-2 sm:px-3 py-1 rounded-full text-xs font-bold transition text-gray-300 hover:text-white">PT</button>
+                <button onclick="setLang('zh')" id="lang-zh" class="px-2 sm:px-3 py-1 rounded-full text-xs font-bold transition text-gray-300 hover:text-white">中</button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-8">
+        <!-- Hero Headline -->
+        <div class="text-center mb-8">
+            <span class="bg-blue-500/20 text-blue-300 text-[11px] font-black px-4 py-1.5 rounded-full border border-blue-500/30 inline-block mb-3" id="tagline-txt"> WORLD CUP 2026 · AI SUPERFAN</span>
+            <h1 class="text-3xl md:text-5xl font-black tracking-tight" id="hero-main-title">Generate Your <span class="bg-gradient-to-r from-cyan-400 via-emerald-400 to-amber-400 bg-clip-text text-transparent">Ultimate Fan Identity</span></h1>
+            <p class="text-gray-400 max-w-2xl mx-auto text-sm md:text-base mt-3" id="hero-desc">Hyper-realistic avatars & cinematic social banners · Share instantly to Twitter, Instagram & more</p>
+        </div>
+
+        <!-- TABS: Avatar / Banner -->
+        <div class="flex justify-center mb-8">
+            <div class="bg-gray-900/60 p-1 rounded-2xl inline-flex gap-1 border border-gray-700">
+                <button id="tab-avatar" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2"><i class="fa-solid fa-user-astronaut"></i> <span id="tab-avatar-text">AI Avatar</span></button>
+                <button id="tab-banner" class="tab-btn px-6 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2"><i class="fa-solid fa-image-landscape"></i> <span id="tab-banner-text">Social Banner</span></button>
+            </div>
+        </div>
+
+        <!-- Main Grid: Left Config + Right Preview -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- LEFT CONFIG PANEL -->
+            <div class="lg:col-span-7 space-y-5">
+                <!-- Avatar Config Panel (visible by default) -->
+                <div id="avatar-config-panel" class="space-y-5">
+                    <!-- Upload photo -->
+                    <div class="glass-panel rounded-2xl p-5 border border-white/5">
+                        <div class="flex items-center gap-2 mb-3"><span class="w-6 h-6 bg-blue-600 rounded-full text-xs flex items-center justify-center font-black">1</span><h3 class="font-bold" id="upload-title">Upload your selfie</h3></div>
+                        <div id="dropzone" class="border-2 border-dashed border-gray-600 hover:border-blue-500 rounded-xl p-5 text-center cursor-pointer transition bg-gray-900/30">
+                            <input type="file" id="avatar-file" accept="image/jpeg,image/png,image/jpg" class="hidden">
+                            <div id="upload-prompt-area">
+                                <i class="fa-regular fa-image text-3xl text-gray-500"></i>
+                                <p class="text-sm mt-1" id="drag-text">Drag & drop or click to upload</p>
+                                <p class="text-xs text-gray-500 mt-1">JPG, PNG up to 5MB (face front best)</p>
+                            </div>
+                            <div id="upload-preview-area" class="hidden flex flex-col items-center">
+                                <img id="preview-avatar-img" class="w-24 h-24 rounded-full object-cover border-2 border-emerald-400 shadow-lg">
+                                <button id="reset-upload-btn" class="text-xs text-red-400 mt-2 underline">Change photo</button>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Select team -->
+                    <div class="glass-panel rounded-2xl p-5">
+                        <div class="flex items-center gap-2 mb-3"><span class="w-6 h-6 bg-emerald-600 rounded-full text-xs flex items-center justify-center font-black">2</span><h3 class="font-bold" id="team-title">Pick your national team</h3></div>
+                        <div class="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-56 overflow-y-auto scrollbar-custom pr-1" id="team-list-avatar">
+                            <!-- Teams injected via JS -->
+                        </div>
+                    </div>
+                    <!-- Style selection (3D/Hyper) -->
+                    <div class="glass-panel rounded-2xl p-5">
+                        <div class="flex items-center gap-2 mb-3"><span class="w-6 h-6 bg-amber-600 rounded-full text-xs flex items-center justify-center font-black">3</span><h3 class="font-bold" id="style-title">AI Art style</h3></div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <div data-style="anime" class="style-card border border-gray-700 rounded-xl p-3 cursor-pointer transition flex items-center gap-3 bg-gray-800/30"><i class="fa-solid fa-draw-polygon text-purple-400 text-xl"></i><div><p class="font-bold text-sm" id="style-anime-name">3D Pop Anime</p><p class="text-xs text-gray-400" id="style-anime-desc">Pixar cinematic look</p></div></div>
+                            <div data-style="hyper" class="style-card border border-gray-700 rounded-xl p-3 cursor-pointer transition flex items-center gap-3 bg-gray-800/30"><i class="fa-solid fa-camera-retro text-blue-400 text-xl"></i><div><p class="font-bold text-sm" id="style-hyper-name">Hyper-Realistic</p><p class="text-xs text-gray-400" id="style-hyper-desc">Stadium lighting + facepaint</p></div></div>
+                        </div>
+                    </div>
+                    <button id="generate-avatar-btn" class="w-full py-4 rounded-xl font-black bg-gradient-to-r from-blue-600 via-emerald-600 to-amber-600 hover:brightness-110 transition-all active:scale-95 shadow-xl flex items-center justify-center gap-2"><i class="fa-solid fa-wand-magic-sparkles"></i><span id="gen-avatar-text">Generate AI Avatar</span></button>
+                </div>
+
+                <!-- Banner Config Panel (hidden initially) -->
+                <div id="banner-config-panel" class="space-y-5 hidden">
+                    <div class="glass-panel rounded-2xl p-5">
+                        <label class="font-bold block mb-2" id="banner-team-label">Select team for banner</label>
+                        <div class="grid grid-cols-3 sm:grid-cols-4 gap-2 max-h-52 overflow-y-auto scrollbar-custom" id="team-list-banner"></div>
+                    </div>
+                    <div class="glass-panel rounded-2xl p-5">
+                        <label class="font-bold block mb-2" id="motto-label">Your motto / name</label>
+                        <textarea id="banner-motto" rows="2" class="w-full bg-gray-900/80 border border-gray-700 rounded-xl p-3 text-white resize-none" placeholder="e.g., 'Vamos Argentina!', 'Heart of a Champion'"></textarea>
+                        <p class="text-xs text-gray-400 mt-1" id="motto-hint">Personalize your banner — AI will integrate it dynamically</p>
+                    </div>
+                    <div class="glass-panel rounded-2xl p-5">
+                        <label class="font-bold block mb-2" id="banner-vibe-label">Visual mood</label>
+                        <div class="flex gap-3">
+                            <select id="banner-vibe" class="bg-gray-900 border border-gray-700 rounded-xl p-2 w-full"><option value="epic">⚡ Epic Stadium</option><option value="neon">🌆 Neon Night</option><option value="vintage">🏆 Vintage Glory</option></select>
+                        </div>
+                    </div>
+                    <button id="generate-banner-btn" class="w-full py-4 rounded-xl font-black bg-gradient-to-r from-violet-600 via-fuchsia-600 to-rose-600 hover:brightness-110 transition-all active:scale-95 shadow-xl flex items-center justify-center gap-2"><i class="fa-regular fa-images"></i><span id="gen-banner-text">Create AI Banner</span></button>
+                </div>
+            </div>
+
+            <!-- RIGHT PREVIEW & SHARE PANEL -->
+            <div class="lg:col-span-5 lg:sticky lg:top-24">
+                <div class="glass-panel rounded-2xl p-6 border border-white/10 shadow-2xl">
+                    <h3 class="text-xl font-black text-center mb-4" id="preview-title">⚡ Live Studio</h3>
+                    <div class="aspect-square w-full max-w-sm mx-auto bg-black/60 rounded-2xl border border-gray-700 relative relative flex items-center justify-center overflow-hidden shadow-inner" id="preview-container">
+                        <div id="preview-placeholder" class="text-center p-6">
+                            <i class="fa-regular fa-futbol text-5xl text-gray-600 mb-3"></i>
+                            <p class="text-xs text-gray-400" id="placeholder-txt">Configure your choices and generate your asset</p>
+                        </div>
+                        <canvas id="outputCanvas" class="hidden w-full h-full object-contain"></canvas>
+                        <div id="preview-loader" class="hidden" style="display: none; position: absolute; background: rgba(0,0,0,0.8); backdrop-filter: blur(8px); border-radius: inherit; z-index: 10;">
+                        <div class="flex flex-col items-center gap-2">
+                            <div class="w-12 h-12 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                            <p class="text-emerald-400 font-bold text-sm" id="loader-status">AI generating...</p>
+                        </div>
+                        </div>
+                        
+                    </div>
+                    
+                    <!-- Download & Share Actions -->
+                    <div id="action-buttons" class="hidden mt-6 space-y-4">
+						<!-- 单个下载按钮，采用原先 premium 的样式，并居中 -->
+						<div class="flex justify-center">
+																																																																				  
+							<button id="download-btn" class="w-full max-w-md py-2.5 rounded-xl font-bold bg-gradient-to-r from-amber-500 to-orange-500 hover:opacity-90 transition flex items-center justify-center gap-2">
+								<i class="fa-regular fa-circle-down"></i> 
+								<span id="download-text">Download (PNG)</span>
+							</button>
+						</div>
+						<!-- 分享按钮区域保持不变 -->
+						<div class="border-t border-gray-700 pt-3">
+							
+						<div class="flex justify-center">
+                        <button id="share-native-btn" class="flex items-center gap-2 text-gray-300 hover:text-white transition">
+                            <i class="fa-solid fa-share-nodes text-xl"></i>
+                            <span class="text-xs" id="share-label">Share</span>
+                        </button>
+                        </div>
+						</div>
+					</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="text-center py-6 text-xs text-gray-500 border-t border-gray-800/40 mt-12">⚽ FANPIC.AI — AI World Cup superfan ecosystem · Not official FIFA product</footer>
+
+
+	
+    <script>
+        // 动态获取后端 API 地址
+        const getApiBaseUrl = () => {
+            // 如果当前访问的是 localhost 或 127.0.0.1，则使用 localhost:3001
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                return 'http://localhost:3001';
+            }
+            // 否则使用当前页面的主机名（即电脑的局域网 IP），端口 3001
+            return `http://${window.location.hostname}:3001`;
+        };
+        const API_BASE_URL = getApiBaseUrl();
+		let hasPaidForDownload = false;
+        const teams = [
+            { code: "USA", iso: "us", name: "USA", primary: "#0A3161", accent: "#FFFFFF" },
+            { code: "Mexico", iso: "mx", name: "Mexico", primary: "#006847", accent: "#CE1126" },
+            { code: "Argentina", iso: "ar", name: "Argentina", primary: "#75AADB", accent: "#FCBF49" },
+            { code: "Brazil", iso: "br", name: "Brazil", primary: "#FFD700", accent: "#009C3B" },
+            { code: "France", iso: "fr", name: "France", primary: "#0055A4", accent: "#EF4135" },
+            { code: "England", iso: "gb", name: "England", primary: "#FFFFFF", accent: "#C8102E" }, // 修复此处
+            { code: "Spain", iso: "es", name: "Spain", primary: "#C60B1E", accent: "#FFC400" },
+            { code: "Germany", iso: "de", name: "Germany", primary: "#000000", accent: "#DD0000" },
+            { code: "Portugal", iso: "pt", name: "Portugal", primary: "#B50000", accent: "#006600" },
+            { code: "Netherlands", iso: "nl", name: "Netherlands", primary: "#FF6F00", accent: "#21468B" },
+            { code: "Japan", iso: "jp", name: "Japan", primary: "#000080", accent: "#FFFFFF" },
+            { code: "Morocco", iso: "ma", name: "Morocco", primary: "#C1272D", accent: "#006233" }
+        ];
+		
+            
+        
+        
+        // Multi-language translations (extended)
+        const i18n = {
+            en: { changePhoto: "Change photo",mottoPlaceholder: "e.g., 'Vamos Argentina!', 'Heart of a Champion'", tagline: "🏆 WORLD CUP 2026 · AI SUPERFAN", heroMain: "Generate Your <span class='bg-gradient-to-r from-cyan-400 via-emerald-400 to-amber-400 bg-clip-text text-transparent'>Ultimate Fan Identity</span>", heroDesc: "Hyper-realistic avatars & cinematic social banners · Share instantly to Twitter, Instagram & more", uploadTitle: "Upload your selfie", dragText: "Drag & drop or click to upload", teamTitle: "Pick your national team", styleTitle: "AI Art style", styleAnimeName: "3D Pop Anime", styleAnimeDesc: "Pixar cinematic look", styleHyperName: "Hyper-Realistic", styleHyperDesc: "Stadium lighting + facepaint", genAvatarText: "Generate AI Avatar", bannerTeamLabel: "Select team for banner", mottoLabel: "Your motto / name", mottoHint: "Personalize your banner — AI will integrate it dynamically", bannerVibeLabel: "Visual mood", genBannerText: "Create AI Banner", previewTitle: "⚡ Live Studio", placeholderTxt: "Configure your choices and generate your asset", downloadText: "Download (PNG)",  shareLabel: "🔥 Share to the world 🔥", tabAvatar: "AI Avatar", tabBanner: "Social Banner", loaderStatus: "AI generating..." },
+            es: { changePhoto: "Cambiar foto",mottoPlaceholder: "p. ej., '¡Vamos Argentina!', 'Corazón de campeón'",tagline: "🏆 MUNDIAL 2026 · SúPER FAN IA", heroMain: "Genera tu <span class='bg-gradient-to-r from-cyan-400 via-emerald-400 to-amber-400 bg-clip-text text-transparent'>Identidad de Fan Definitiva</span>", heroDesc: "Avatares hiperrealistas y banners cinematográficos · Comparte en Twitter, Instagram y más", uploadTitle: "Sube tu selfie", dragText: "Arrastra o haz clic", teamTitle: "Selecciona tu selección", styleTitle: "Estilo IA", styleAnimeName: "3D Pop Anime", styleAnimeDesc: "Estilo Pixar", styleHyperName: "Hiperrealista", styleHyperDesc: "Iluminación de estadio", genAvatarText: "Generar Avatar IA", bannerTeamLabel: "Equipo para banner", mottoLabel: "Tu lema / nombre", mottoHint: "Personaliza tu banner — IA lo integrará", bannerVibeLabel: "Ambiente visual", genBannerText: "Crear Banner IA", previewTitle: "⚡ Estudio en Vivo", placeholderTxt: "Configura tus opciones", downloadText: "Descargar (PNG)", shareLabel: "🔥 Comparte al mundo 🔥", tabAvatar: "Avatar IA", tabBanner: "Banner Social", loaderStatus: "IA generando..." },
+            pt: { changePhoto: "Trocar foto",mottoPlaceholder: "ex.: 'Vamos Argentina!', 'Coração de Campeão'",tagline: "🏆 COPA 2026 · SUPER FÃ IA", heroMain: "Gere sua <span class='bg-gradient-to-r from-cyan-400 via-emerald-400 to-amber-400 bg-clip-text text-transparent'>Identidade Suprema de Fã </span>", heroDesc: "Avatares hiper-realistas e banners cinematográficos · Compartilhe no Twitter, Instagram e mais", uploadTitle: "Envie sua selfie", dragText: "Arraste ou clique", teamTitle: "Selecioneua seleção", styleTitle: "Estilo IA", styleAnimeName: "3D Pop Anime", styleAnimeDesc: "Estilo Pixar", styleHyperName: "Hiper-realista", styleHyperDesc: "Iluminação de estádio", genAvatarText: "Gerar Avatar IA", bannerTeamLabel: "Time para banner", mottoLabel: "Seu lema / nome", mottoHint: "Personalize seu banner — IA integrará", bannerVibeLabel: "Clima visual", genBannerText: "Criar Banner IA", previewTitle: "⚡ Estúdio Ao Vivo", placeholderTxt: "Configure suas opções", downloadText: "Baixar (PNG)", shareLabel: "🔥 Compartilhe com o mundo 🔥", tabAvatar: "Avatar IA", tabBanner: "Banner Social", loaderStatus: "IA gerando..." },
+            zh: { changePhoto: "更换照片",mottoPlaceholder: "例如：'Vamos Argentina!', '冠军之心'",tagline: "🏆 2026世界杯 · AI 超级球迷", heroMain: "生成你的<span class='bg-gradient-to-r from-cyan-400 via-emerald-400 to-amber-400 bg-clip-text text-transparent'>终极球迷身份</span>", heroDesc: "超写实头像与电影级社交媒体横幅 · 一键分享到Twitter、Instagram等平台", uploadTitle: "上传你的自拍", dragText: "拖放或点击上传照片", teamTitle: "选择国家队", styleTitle: "AI艺术风格", styleAnimeName: "3D动漫风", styleAnimeDesc: "皮克斯质感", styleHyperName: "超写实风", styleHyperDesc: "球场灯光+面部彩绘", genAvatarText: "生成AI头像", bannerTeamLabel: "选择球队横幅风格", mottoLabel: "你的座右铭/名字", mottoHint: "个性化横幅 - AI动态融合", bannerVibeLabel: "视觉氛围", genBannerText: "生成AI横幅", previewTitle: "⚡ 实况工作室", placeholderTxt: "配置选项并生成你的作品", downloadText: "下载 (PNG)", shareLabel: "🔥分享到全球社区 🔥", tabAvatar: "AI头像", tabBanner: "社交横幅", loaderStatus: "AI生成中..." }
+        };
+        
+        let currentLang = 'en';
+        let selectedTeamAvatar = "USA", selectedStyle = "hyper";
+        let selectedTeamBanner = "USA";
+        let uploadedImageData = null;
+        let currentActiveTab = "avatar"; // 'avatar' or 'banner'
+        let currentAvatarCanvasData = null, currentBannerCanvasData = null;
+        
+        // Helper: update UI language
+        function setLang(lang) {
+            currentLang = lang;
+            document.querySelectorAll('[id^="lang-"]').forEach(btn => { btn.classList.remove('bg-blue-600', 'text-white'); btn.classList.add('text-gray-300'); });
+            document.getElementById(`lang-${lang}`).classList.add('bg-blue-600', 'text-white');
+            const t = i18n[lang];
+            document.getElementById('tagline-txt').innerHTML = t.tagline;
+            document.getElementById('hero-main-title').innerHTML = t.heroMain;
+            document.getElementById('hero-desc').innerHTML = t.heroDesc;
+            document.getElementById('upload-title').innerHTML = t.uploadTitle;
+            document.getElementById('drag-text').innerHTML = t.dragText;
+            document.getElementById('team-title').innerHTML = t.teamTitle;
+            document.getElementById('style-title').innerHTML = t.styleTitle;
+            document.getElementById('style-anime-name').innerHTML = t.styleAnimeName;
+            document.getElementById('style-anime-desc').innerHTML = t.styleAnimeDesc;
+            document.getElementById('style-hyper-name').innerHTML = t.styleHyperName;
+            document.getElementById('style-hyper-desc').innerHTML = t.styleHyperDesc;
+            document.getElementById('gen-avatar-text').innerHTML = t.genAvatarText;
+            document.getElementById('banner-team-label').innerHTML = t.bannerTeamLabel;
+            document.getElementById('motto-label').innerHTML = t.mottoLabel;
+            document.getElementById('motto-hint').innerHTML = t.mottoHint;
+            const mottoTextarea = document.getElementById('banner-motto');
+            if (mottoTextarea) mottoTextarea.placeholder = t.mottoPlaceholder;
+            document.getElementById('banner-vibe-label').innerHTML = t.bannerVibeLabel;
+            document.getElementById('gen-banner-text').innerHTML = t.genBannerText;
+            document.getElementById('preview-title').innerHTML = t.previewTitle;
+            document.getElementById('placeholder-txt').innerHTML = t.placeholderTxt;
+            document.getElementById('download-text').innerHTML = t.downloadText;
+            document.getElementById('share-label').innerHTML = t.shareLabel;
+            // 更新“更换照片”按钮文本
+            const resetUploadBtn = document.getElementById('reset-upload-btn');
+            if (resetUploadBtn) {
+                resetUploadBtn.innerHTML = t.changePhoto;
+            }
+            document.getElementById('tab-avatar-text').innerHTML = t.tabAvatar;
+            document.getElementById('tab-banner-text').innerHTML = t.tabBanner;
+        }
+        
+		function getFlagEmoji(isoCode) {
+			if (isoCode === 'gb-eng') isoCode = 'gb';
+			const codePoints = isoCode.toUpperCase().split('').map(char => 127397 + char.charCodeAt());
+			return String.fromCodePoint(...codePoints);
+}
+
+		function renderTeamLists() {
+			const avatarContainer = document.getElementById('team-list-avatar');
+			const bannerContainer = document.getElementById('team-list-banner');
+			const render = (container, isAvatar) => {
+				container.innerHTML = '';
+				teams.forEach(team => {
+					const div = document.createElement('div');
+					div.className = `team-card border border-gray-800 rounded-xl p-2 text-center cursor-pointer transition bg-gray-900/30 flex flex-col items-center ${(isAvatar && selectedTeamAvatar === team.code) || (!isAvatar && selectedTeamBanner === team.code) ? 'selected' : ''}`;
+					// 这个好用的
+                    div.innerHTML = `<img src="https://flagcdn.com/w40/${team.iso}.png" alt="${team.name}" class="w-8 h-6 object-cover rounded-sm mb-1 shadow-sm"><span class="text-xs font-semibold">${team.name}</span>`;
+
+					
+					div.onclick = () => {
+						if(isAvatar) {
+							document.querySelectorAll('#team-list-avatar .team-card').forEach(c => c.classList.remove('selected'));
+							div.classList.add('selected');
+							selectedTeamAvatar = team.code;
+						} else {
+							document.querySelectorAll('#team-list-banner .team-card').forEach(c => c.classList.remove('selected'));
+							div.classList.add('selected');
+							selectedTeamBanner = team.code;
+						}
+					};
+					container.appendChild(div);
+				});
+			};
+			render(avatarContainer, true);
+			render(bannerContainer, false);
+		}
+		
+												 
+
+        
+			async function generateAvatar() {
+				if (!uploadedImageData) {
+					alert(currentLang === 'zh' ? "请先上传照片" : "Upload photo first");
+					return;
+				}
+				showLoader(true);
+				
+				try {
+					const response = await fetch(`${API_BASE_URL}/api/generate-avatar`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							imageBase64: uploadedImageData,
+							teamCode: selectedTeamAvatar,
+							style: selectedStyle
+						})
+					});
+					
+					if (!response.ok) throw new Error('Generation failed');
+					
+					const data = await response.json();
+					const img = new Image();
+					img.onload = () => {
+						const canvas = document.getElementById('outputCanvas');
+						canvas.width = 800;
+						canvas.height = 800;
+						const ctx = canvas.getContext('2d');
+						ctx.drawImage(img, 0, 0, 800, 800);
+						
+						
+						// ============================================
+						
+						currentAvatarCanvasData = canvas.toDataURL();
+						document.getElementById('outputCanvas').classList.remove('hidden');
+						document.getElementById('preview-placeholder').classList.add('hidden');
+						document.getElementById('action-buttons').classList.remove('hidden');
+						showLoader(false);
+					};
+					img.src = data.imageData;
+				} catch (error) {
+					console.error(error);
+					alert(currentLang === 'zh' ? "生成失败，请重试" : "Generation failed, please retry");
+					showLoader(false);
+				}
+			}
+			async function generateBanner() {
+				const motto = document.getElementById('banner-motto').value.trim() || "WORLD CUP LEGEND";
+				const team = selectedTeamBanner;
+				const vibe = document.getElementById('banner-vibe').value;
+				const teamColor = teams.find(t=>t.code===team)?.primary || '#1E3A8A';
+				
+				showLoader(true);
+				
+				try {
+					const response = await fetch(`${API_BASE_URL}/api/generate-banner-bg`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({
+							teamCode: team,
+							motto: motto,
+							vibe: vibe
+						})
+					});
+					
+					if (!response.ok) throw new Error('Background generation failed');
+					
+					const data = await response.json();
+					const bgImage = new Image();
+					
+					bgImage.onload = () => {
+						const canvas = document.createElement('canvas');
+                        canvas.width = 1500;
+                        canvas.height = 500;
+                        const ctx = canvas.getContext('2d');
+
+                        ctx.drawImage(bgImage, 0, 0, 1500, 500);
+
+                        // 如果用户填写了 motto，则显示（最多32字符）
+                        if (motto && motto !== "WORLD CUP LEGEND") {
+                            ctx.font = '900 68px "Inter", system-ui';
+                            ctx.fillStyle = '#ffffff';
+                            ctx.shadowBlur = 12;
+                            ctx.shadowColor = 'rgba(0,0,0,0.5)';
+                            const displayText = motto.substring(0, 32);
+                            const textWidth = ctx.measureText(displayText).width;
+                            const x = (canvas.width - textWidth) / 2;
+                            const y = 100;
+                            ctx.fillText(displayText, x, y);
+                        }
+						
+						
+						
+						currentBannerCanvasData = canvas.toDataURL();
+						
+						const displayCanvas = document.getElementById('outputCanvas');
+						displayCanvas.width = 800;
+						displayCanvas.height = 267;
+						const dctx = displayCanvas.getContext('2d');
+						dctx.drawImage(canvas, 0, 0, 800, 267);
+						
+						document.getElementById('outputCanvas').classList.remove('hidden');
+						document.getElementById('preview-placeholder').classList.add('hidden');
+						document.getElementById('action-buttons').classList.remove('hidden');
+						showLoader(false);
+					};
+					
+					bgImage.src = data.imageData;
+				} catch (error) {
+					console.error(error);
+					alert(currentLang === 'zh' ? "生成横幅失败，请重试" : "Banner generation failed, please retry");
+					showLoader(false);
+				}
+			}
+
+
+		
+         
+        function showLoader(show) {
+            const loader = document.getElementById('preview-loader');
+            const container = document.getElementById('preview-container');
+            if (show) {
+                // 显示前重新计算位置，强制居中
+                const rect = container.getBoundingClientRect();
+                loader.style.position = 'absolute';
+                loader.style.top = '0';
+                loader.style.left = '0';
+                loader.style.width = rect.width + 'px';
+                loader.style.height = rect.height + 'px';
+                loader.style.display = 'flex';
+                loader.style.alignItems = 'center';
+                loader.style.justifyContent = 'center';
+                loader.style.backgroundColor = 'rgba(0,0,0,0.8)';
+                loader.style.backdropFilter = 'blur(8px)';
+                loader.classList.remove('hidden');
+                document.getElementById('outputCanvas').classList.add('hidden');
+                document.getElementById('preview-placeholder').classList.add('hidden');
+            } else {
+                loader.classList.add('hidden');
+                loader.style.display = '';
+            }
+}
+        
+        function switchTab(tab) {
+            currentActiveTab = tab;
+            const avatarPanel = document.getElementById('avatar-config-panel');
+            const bannerPanel = document.getElementById('banner-config-panel');
+            if(tab === 'avatar') {
+                avatarPanel.classList.remove('hidden'); bannerPanel.classList.add('hidden');
+                document.getElementById('tab-avatar').classList.add('tab-active'); document.getElementById('tab-banner').classList.remove('tab-active');
+                if(currentAvatarCanvasData) { 
+                    document.getElementById('outputCanvas').classList.remove('hidden'); 
+                    document.getElementById('preview-placeholder').classList.add('hidden'); 
+                } else { 
+                    document.getElementById('outputCanvas').classList.add('hidden'); 
+                    document.getElementById('preview-placeholder').classList.remove('hidden'); 
+                }
+            } else {
+                avatarPanel.classList.add('hidden'); bannerPanel.classList.remove('hidden');
+                document.getElementById('tab-banner').classList.add('tab-active'); document.getElementById('tab-avatar').classList.remove('tab-active');
+                if(currentBannerCanvasData) { 
+                    document.getElementById('outputCanvas').classList.remove('hidden'); 
+                    document.getElementById('preview-placeholder').classList.add('hidden'); 
+                } else { 
+                    document.getElementById('outputCanvas').classList.add('hidden'); 
+                    document.getElementById('preview-placeholder').classList.remove('hidden'); 
+                }
+            }
+            // 先隐藏按钮区域
+            document.getElementById('action-buttons').classList.add('hidden');
+            // 如果当前标签已经有生成好的图片，则显示按钮
+            if (tab === 'avatar' && currentAvatarCanvasData) {
+                document.getElementById('action-buttons').classList.remove('hidden');
+            } else if (tab === 'banner' && currentBannerCanvasData) {
+                document.getElementById('action-buttons').classList.remove('hidden');
+            }
+        }
+        
+        // Image upload logic
+        const fileInput = document.getElementById('avatar-file');
+        const dropzone = document.getElementById('dropzone');
+        dropzone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            if(e.target.files[0]) {
+                const reader = new FileReader();
+                reader.onload = (ev) => { uploadedImageData = ev.target.result; document.getElementById('preview-avatar-img').src = uploadedImageData; document.getElementById('upload-prompt-area').classList.add('hidden'); document.getElementById('upload-preview-area').classList.remove('hidden'); };
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+        document.getElementById('reset-upload-btn')?.addEventListener('click', () => { uploadedImageData = null; document.getElementById('upload-prompt-area').classList.remove('hidden'); document.getElementById('upload-preview-area').classList.add('hidden'); fileInput.value = ''; });
+        
+        
+        
+        document.getElementById('generate-avatar-btn').addEventListener('click', generateAvatar);
+        document.getElementById('generate-banner-btn').addEventListener('click', generateBanner);
+        document.getElementById('download-btn').addEventListener('click', async () => {
+			if (!hasPaidForDownload) {
+				const userConfirmed = confirm("下载需要支付 $1.99，是否继续支付？");
+				if (!userConfirmed) return;
+				// 这里可调用真实支付接口，成功后设置 hasPaidForDownload = true
+				// 模拟支付成功：
+				hasPaidForDownload = true;
+				alert("支付成功！现在可以下载了。");
+			}
+			
+			const data = currentActiveTab === 'avatar' ? currentAvatarCanvasData : currentBannerCanvasData;
+			if(data) {
+				const a = document.createElement('a');
+				a.href = data;
+				a.download = `fanpic_${currentActiveTab}.png`;
+				a.click();
+			} else {
+				alert("没有可下载的图片，请先生成。");
+			}
+		});
+		
+		// 新的分享按钮：优先分享图片，失败则分享文本（带详细日志）
+        document.getElementById('share-native-btn').addEventListener('click', async () => {
+            console.log('1. 分享按钮被点击');
+            const canvas = document.getElementById('outputCanvas');
+            if (!canvas) {
+                alert('Please generate an image first.');
+                console.error('Canvas not found');
+                return;
+            }
+            console.log('2. Canvas 存在');
+
+            const title = `My AI World Cup ${currentActiveTab === 'avatar' ? 'Avatar' : 'Banner'}`;
+            const text = 'Created with FANPIC.AI ⚽🏆 #WorldCup2026 #AIFan';
+
+            // 检查是否支持 Web Share API
+            if (!navigator.share) {
+                console.warn('3. 浏览器不支持 navigator.share，降级为复制链接');
+                shareTextOnly();
+                return;
+            }
+
+            // 尝试分享图片
+            if (canvas.toBlob) {
+                console.log('4. 尝试生成图片 blob');
+                canvas.toBlob(async (blob) => {
+                    if (!blob) {
+                        console.error('5. 生成 blob 失败');
+                        shareTextOnly();
+                        return;
+                    }
+                    console.log('6. blob 生成成功，大小:', blob.size);
+                    try {
+                        await navigator.share({
+                            title: title,
+                            text: text,
+                            files: [new File([blob], `fanpic_${currentActiveTab}.png`, { type: 'image/png' })]
+                        });
+                        console.log('7. 分享成功');
+                    } catch (err) {
+                        if (err.name !== 'AbortError') {
+                            console.error('8. 分享图片失败:', err);
+                            shareTextOnly();
+                        } else {
+                            console.log('用户取消分享');
+                        }
+                    }
+                }, 'image/png');
+            } else {
+                console.warn('9. canvas.toBlob 不可用，降级');
+                shareTextOnly();
+            }
+        });
+
+        function shareTextOnly() {
+            const text = `Check my AI World Cup ${currentActiveTab === 'avatar' ? 'Avatar' : 'Banner'}! Created with FANPIC.AI ⚽🏆 #WorldCup2026 #AIFan`;
+            if (navigator.share) {
+                navigator.share({ text: text }).catch(() => {});
+            } else {
+                // 最后的降级：复制文本到剪贴板
+                navigator.clipboard.writeText(text).then(() => {
+                    alert('Share link copied to clipboard. You can paste it anywhere.');
+                }).catch(() => {
+                    alert('Unable to share. Please manually copy the link.');
+                });
+            }
+        }
+
+                function shareTextOnly() {
+                    const text = `Check my AI World Cup ${currentActiveTab === 'avatar' ? 'Avatar' : 'Banner'}! Created with FANPIC.AI ⚽🏆 #WorldCup2026 #AIFan`;
+                    if (navigator.share) {
+                        navigator.share({ text: text }).catch(() => {});
+                    } else {
+                        // 最后的降级：复制链接到剪贴板并提示
+                        navigator.clipboard.writeText(text);
+                        alert('Share link copied to clipboard. You can paste it anywhere.');
+                    }
+                }
+        
+        document.getElementById('tab-avatar').addEventListener('click', () => switchTab('avatar'));
+        document.getElementById('tab-banner').addEventListener('click', () => switchTab('banner'));
+        
+        
+        // Style selection
+        document.querySelectorAll('.style-card').forEach(card => { card.addEventListener('click', function() { document.querySelectorAll('.style-card').forEach(c=>c.classList.remove('selected')); this.classList.add('selected'); selectedStyle = this.dataset.style; }); });
+        renderTeamLists();
+		setLang('en');
+		switchTab('avatar');
+
+		// 默认选中 3D Pop Anime 风格
+		const defaultStyleCard = document.querySelector('.style-card[data-style="anime"]');
+		if (defaultStyleCard) {
+			defaultStyleCard.classList.add('selected');
+			selectedStyle = 'anime';
+		}
+    </script>
+</body>
+</html>
